@@ -1,0 +1,41 @@
+// Prisma schema for Loop — the agentic job-search copilot.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Where a given application currently sits in the pipeline.
+enum ApplicationStatus {
+  APPLIED
+  PHONE_SCREEN
+  INTERVIEW
+  OFFER
+  REJECTED
+  GHOSTED
+}
+
+// A single job application being tracked.
+model Application {
+  id          String            @id @default(cuid())
+  company     String
+  role        String
+  jobUrl      String
+  status      ApplicationStatus @default(APPLIED)
+
+  // Filled in later by Claude.
+  // NOTE: 0–100 range is enforced by a DB CHECK constraint added in the
+  // `add_fitscore_check` migration (Prisma can't express CHECK in-schema).
+  fitScore    Int?
+  fitNotes    String?
+  coverLetter String?
+
+  appliedAt   DateTime          @default(now())
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
