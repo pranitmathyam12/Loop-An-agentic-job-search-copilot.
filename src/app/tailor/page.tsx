@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 
+type Verification = {
+  passed: boolean;
+  flags: string[];
+};
+
 type TailorResult = {
   tailoredResume: string;
   changeLog: string;
+  verification: Verification;
 };
 
 export default function TailorPage() {
@@ -104,6 +110,33 @@ export default function TailorPage() {
       {/* --- Results --- */}
       {result && (
         <section className="mt-10 flex flex-col gap-8">
+          {/* Fact-check verification — deterministic, no LLM */}
+          {result.verification.passed ? (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[.06] px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              <span aria-hidden>✓</span>
+              Verified: no fabricated facts detected
+            </div>
+          ) : (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/[.06] px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-medium text-red-700 dark:text-red-400">
+                <span aria-hidden>⚠</span>
+                Verification failed —{" "}
+                {result.verification.flags.length} possible fabrication
+                {result.verification.flags.length === 1 ? "" : "s"} detected
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-8 text-sm text-red-700/90 dark:text-red-400/90">
+                {result.verification.flags.map((flag, i) => (
+                  <li key={i}>{flag}</li>
+                ))}
+              </ul>
+              <p className="mt-2 pl-1 text-xs text-foreground/50">
+                These numbers, dates, companies, or titles appear in the tailored
+                resume but not in your original. Review them before using this
+                version.
+              </p>
+            </div>
+          )}
+
           {/* Tailored resume */}
           <div>
             <div className="mb-3 flex items-center justify-between gap-4">

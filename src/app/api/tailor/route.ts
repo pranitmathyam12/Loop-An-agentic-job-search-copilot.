@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { tailorResume, TailoringError } from "@/lib/tailor";
+import { verifyTailoredResume } from "@/lib/verify";
+import { RESUME } from "@/lib/resume";
 
 // Expected POST body. The resume itself is sourced from src/lib/resume.ts, so
 // the client only supplies the job description to tailor toward.
@@ -11,7 +13,9 @@ const tailorRequestSchema = z.object({
 
 // POST /api/tailor
 // Tailors the resume (src/lib/resume.ts) to the given job description via
-// Claude and returns { tailoredResume, changeLog }. Stateless — nothing is
+// Claude, then runs a deterministic (no-LLM) fact-check comparing the tailored
+// output against the original resume. Returns
+// { tailoredResume, changeLog, verification }. Stateless — nothing is
 // persisted; this is a direct Claude feature for now.
 export async function POST(request: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -41,7 +45,10 @@ export async function POST(request: Request) {
 
   try {
     const result = await tailorResume(parsed.data.jobDescription);
-    return NextResponse.json(result);
+    // Deterministic backstop: confirm the tailored output introduced no
+    // numbers/dates/companies/titles absent from the original resume.
+    const verification = verifyTailoredResume(RESUME, result.tailoredResume);
+    return NextResponse.json({ ...result, verification });
   } catch (err) {
     if (err instanceof TailoringError) {
       return NextResponse.json(
