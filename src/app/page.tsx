@@ -1,103 +1,251 @@
-import Image from "next/image";
+"use client";
+
+import type { Application } from "@prisma/client";
+import { useCallback, useEffect, useState } from "react";
+
+type FormState = {
+  company: string;
+  role: string;
+  jobUrl: string;
+  jobDescription: string;
+};
+
+const EMPTY_FORM: FormState = {
+  company: "",
+  role: "",
+  jobUrl: "",
+  jobDescription: "",
+};
+
+// Tailwind classes for each pipeline status.
+const STATUS_STYLES: Record<string, string> = {
+  APPLIED: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  PHONE_SCREEN: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  INTERVIEW: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  OFFER: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  REJECTED: "bg-red-500/10 text-red-600 dark:text-red-400",
+  GHOSTED: "bg-zinc-500/10 text-zinc-500 dark:text-zinc-400",
+};
+
+// Color the fit score by band.
+function scoreColor(score: number): string {
+  if (score >= 85) return "text-emerald-600 dark:text-emerald-400";
+  if (score >= 70) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const loadApplications = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const res = await fetch("/api/applications");
+      if (!res.ok) throw new Error(`Failed to load applications (${res.status})`);
+      setApplications((await res.json()) as Application[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load applications.");
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadApplications();
+  }, [loadApplications]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error ?? `Request failed (${res.status})`);
+      }
+      // Prepend the newly-scored row so it shows instantly, then refresh from
+      // the server to stay authoritative.
+      setApplications((prev) => [data as Application, ...prev]);
+      setForm(EMPTY_FORM);
+      void loadApplications();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function update<K extends keyof FormState>(key: K, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const inputClasses =
+    "w-full rounded-lg border border-black/[.12] dark:border-white/[.15] bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-foreground/60";
+
+  return (
+    <div className="font-sans min-h-screen mx-auto max-w-3xl px-6 py-12">
+      <header className="mb-10">
+        <h1 className="text-2xl font-semibold tracking-tight">Loop</h1>
+        <p className="mt-1 text-sm text-foreground/60">
+          Add a job and Claude scores how well it fits your resume.
+        </p>
+      </header>
+
+      {/* --- Add application form --- */}
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-xl border border-black/[.08] dark:border-white/[.12] p-5 sm:p-6"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+              Company
+            </label>
+            <input
+              className={inputClasses}
+              value={form.company}
+              onChange={(e) => update("company", e.target.value)}
+              placeholder="Perplexity AI"
+              required
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+              Role
+            </label>
+            <input
+              className={inputClasses}
+              value={form.role}
+              onChange={(e) => update("role", e.target.value)}
+              placeholder="Full-Stack Engineer"
+              required
+            />
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="mt-4">
+          <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+            Job URL
+          </label>
+          <input
+            className={inputClasses}
+            type="url"
+            value={form.jobUrl}
+            onChange={(e) => update("jobUrl", e.target.value)}
+            placeholder="https://company.com/careers/role"
+            required
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </div>
+
+        <div className="mt-4">
+          <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+            Job description
+          </label>
+          <textarea
+            className={`${inputClasses} min-h-32 resize-y`}
+            value={form.jobDescription}
+            onChange={(e) => update("jobDescription", e.target.value)}
+            placeholder="Paste the full job description here…"
+            required
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        <div className="mt-5 flex items-center gap-4">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-full bg-foreground px-5 h-10 text-sm font-medium text-background transition-colors hover:bg-foreground/85 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Scoring with Claude…" : "Score & save"}
+          </button>
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+        </div>
+      </form>
+
+      {/* --- Applications list --- */}
+      <section className="mt-10">
+        <h2 className="mb-4 text-sm font-medium text-foreground/70">
+          Applications{" "}
+          {!loadingList && (
+            <span className="text-foreground/40">({applications.length})</span>
+          )}
+        </h2>
+
+        {loadingList ? (
+          <p className="text-sm text-foreground/50">Loading…</p>
+        ) : applications.length === 0 ? (
+          <p className="text-sm text-foreground/50">
+            No applications yet. Add one above to get started.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {applications.map((app) => (
+              <li
+                key={app.id}
+                className="rounded-xl border border-black/[.08] dark:border-white/[.12] p-4 sm:p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{app.company}</h3>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          STATUS_STYLES[app.status] ?? STATUS_STYLES.GHOSTED
+                        }`}
+                      >
+                        {app.status.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-foreground/70 truncate">
+                      {app.role}
+                    </p>
+                    <a
+                      href={app.jobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-xs text-foreground/45 hover:text-foreground/70 hover:underline truncate max-w-full"
+                    >
+                      {app.jobUrl}
+                    </a>
+                  </div>
+
+                  {app.fitScore !== null && (
+                    <div className="shrink-0 text-right">
+                      <div
+                        className={`text-2xl font-semibold tabular-nums ${scoreColor(
+                          app.fitScore,
+                        )}`}
+                      >
+                        {app.fitScore}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wide text-foreground/40">
+                        fit
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {app.fitNotes && (
+                  <p className="mt-3 border-t border-black/[.06] dark:border-white/[.08] pt-3 text-sm text-foreground/65 leading-relaxed">
+                    {app.fitNotes}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

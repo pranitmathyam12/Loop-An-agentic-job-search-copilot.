@@ -28,10 +28,18 @@ model Application {
   jobUrl      String
   status      ApplicationStatus @default(APPLIED)
 
-  // Filled in later by Claude.
-  // NOTE: 0–100 range is enforced by a DB CHECK constraint added in the
-  // `add_fitscore_check` migration (Prisma can't express CHECK in-schema).
+  // Filled in by Claude's scoring (src/lib/score.ts).
+  // NOTE: 0–100 range on fitScore is enforced by a DB CHECK constraint added in
+  // the `add_fitscore_check` migration (Prisma can't express CHECK in-schema).
   fitScore    Int?
+  // Breakdown sub-scores (0–100) and separated strengths/gaps.
+  skillsMatch     Int?
+  experienceMatch Int?
+  domainMatch     Int?
+  strengths       String?
+  gaps            String?
+  // Legacy free-text notes from the earlier single-explanation scorer; kept so
+  // previously-seeded rows still render.
   fitNotes    String?
   coverLetter String?
 
