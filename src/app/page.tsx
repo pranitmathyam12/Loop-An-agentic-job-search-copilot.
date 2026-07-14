@@ -1,6 +1,7 @@
 "use client";
 
 import type { Application } from "@prisma/client";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type FormState = {
@@ -94,7 +95,15 @@ export default function Home() {
   return (
     <div className="font-sans min-h-screen mx-auto max-w-3xl px-6 py-12">
       <header className="mb-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Loop</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Loop</h1>
+          <Link
+            href="/tailor"
+            className="text-xs text-foreground/45 hover:text-foreground/70 hover:underline"
+          >
+            tailor a resume →
+          </Link>
+        </div>
         <p className="mt-1 text-sm text-foreground/60">
           Add a job and Claude scores how well it fits your resume.
         </p>
