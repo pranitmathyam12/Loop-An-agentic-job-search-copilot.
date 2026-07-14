@@ -14,8 +14,9 @@ const createSchema = z.object({
 });
 
 // POST /api/applications
-// Scores the job description against the sample resume via Claude, then saves
-// a new Application row (status APPLIED) with the resulting fitScore/fitNotes.
+// Scores the job description against the resume via Claude, then saves a new
+// Application row (status APPLIED) with the resulting fitScore and breakdown
+// (skillsMatch/experienceMatch/domainMatch/strengths/gaps).
 export async function POST(request: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
   const { company, role, jobUrl, jobDescription } = parsed.data;
 
   try {
-    const { fitScore, explanation } = await scoreJob(jobDescription);
+    const { fitScore, skillsMatch, experienceMatch, domainMatch, strengths, gaps } =
+      await scoreJob(jobDescription);
 
     const application = await prisma.application.create({
       data: {
@@ -54,7 +56,11 @@ export async function POST(request: Request) {
         jobUrl,
         status: ApplicationStatus.APPLIED,
         fitScore,
-        fitNotes: explanation,
+        skillsMatch,
+        experienceMatch,
+        domainMatch,
+        strengths,
+        gaps,
       },
     });
 

@@ -236,10 +236,69 @@ export default function Home() {
                   )}
                 </div>
 
-                {app.fitNotes && (
-                  <p className="mt-3 border-t border-black/[.06] dark:border-white/[.08] pt-3 text-sm text-foreground/65 leading-relaxed">
-                    {app.fitNotes}
-                  </p>
+                {(app.skillsMatch !== null ||
+                  app.experienceMatch !== null ||
+                  app.domainMatch !== null ||
+                  app.strengths ||
+                  app.gaps ||
+                  app.fitNotes) && (
+                  <div className="mt-3 border-t border-black/[.06] dark:border-white/[.08] pt-3">
+                    {/* Sub-score breakdown */}
+                    {(app.skillsMatch !== null ||
+                      app.experienceMatch !== null ||
+                      app.domainMatch !== null) && (
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                        {app.skillsMatch !== null && (
+                          <span className="text-foreground/60">
+                            Skills{" "}
+                            <span className={`font-medium tabular-nums ${scoreColor(app.skillsMatch)}`}>
+                              {app.skillsMatch}
+                            </span>
+                          </span>
+                        )}
+                        {app.experienceMatch !== null && (
+                          <span className="text-foreground/60">
+                            Experience{" "}
+                            <span className={`font-medium tabular-nums ${scoreColor(app.experienceMatch)}`}>
+                              {app.experienceMatch}
+                            </span>
+                          </span>
+                        )}
+                        {app.domainMatch !== null && (
+                          <span className="text-foreground/60">
+                            Domain{" "}
+                            <span className={`font-medium tabular-nums ${scoreColor(app.domainMatch)}`}>
+                              {app.domainMatch}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {app.strengths && (
+                      <p className="mt-3 text-sm text-foreground/65 leading-relaxed">
+                        <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                          Strengths:{" "}
+                        </span>
+                        {app.strengths}
+                      </p>
+                    )}
+                    {app.gaps && (
+                      <p className="mt-2 text-sm text-foreground/65 leading-relaxed">
+                        <span className="font-medium text-red-600 dark:text-red-400">
+                          Gaps:{" "}
+                        </span>
+                        {app.gaps}
+                      </p>
+                    )}
+
+                    {/* Legacy single-explanation rows from the earlier scorer. */}
+                    {app.fitNotes && !app.strengths && !app.gaps && (
+                      <p className="text-sm text-foreground/65 leading-relaxed">
+                        {app.fitNotes}
+                      </p>
+                    )}
+                  </div>
                 )}
               </li>
             ))}
