@@ -103,6 +103,12 @@ export default function Home() {
           >
             tailor a resume →
           </Link>
+          <Link
+            href="/agent-score"
+            className="text-xs text-foreground/45 hover:text-foreground/70 hover:underline"
+          >
+            agent score →
+          </Link>
         </div>
         <p className="mt-1 text-sm text-foreground/60">
           Add a job and Claude scores how well it fits your resume.
